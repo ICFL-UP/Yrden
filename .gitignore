@@ -7,6 +7,9 @@
 !.vscode/extensions.json
 *.code-workspace
 
+# SQLTools
+yrden.session.sql
+
 # Local History for Visual Studio Code
 .history/
 
