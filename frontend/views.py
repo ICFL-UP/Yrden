@@ -5,6 +5,8 @@ from django.http import HttpResponse
 from django.views.generic import ListView
 from frontend.forms import LogMessageForm
 from frontend.models import LogMessage
+from frontend.internal import MyApplication
+from frontend.external import HelloWorldPrinter, AlohaWorldPrinter
 
 class HomeListView(ListView):
     """Renders the home page, with a list of all messages."""
@@ -31,12 +33,14 @@ def log_message(request):
     else:
         return render(request, "frontend/log_message.html", {"form": form})
 
-def hello_there(request, name):
-    return render(
-        request,
-        'frontend/hello_there.html',
-        {
-            'name': name,
-            'date': datetime.now()
-        }
-    )
+def plugins(request):
+    app = MyApplication(plugins=[HelloWorldPrinter()])
+    app.run()
+
+    app = MyApplication(plugins=[AlohaWorldPrinter()])
+    app.run()
+
+    app = MyApplication(plugins=[HelloWorldPrinter(), AlohaWorldPrinter()])
+    app.run()
+
+    return HttpResponse()

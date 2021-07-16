@@ -1,0 +1,26 @@
+{% extends "frontend/layout.html" %}
+{% block title %}
+    Plugins
+{% endblock %}
+{% block content %}
+    <h2>Plugins Installed</h2>
+
+    {% if plugins_list %}
+        <table class="plugin_list">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plugin in plugin_list %}
+                    <tr>
+                        <td>{{ plugin }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No plugins have been added.</p>
+    {% endif %}
+{% endblock %}
