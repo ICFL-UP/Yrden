@@ -13,4 +13,4 @@ class Insert2(ActionProvider):
         logger.debug(
             'Insert2::perform(): args:{}, kwargs:{}'.format(args, kwargs))
 
-        print("Insert2 Action Perform()")
+        print("Insert2 Action Perform()\n")

@@ -1,5 +1,6 @@
 from plugin_mount import PluginMount
 
+
 class ActionProvider(metaclass=PluginMount):
     """
     Mount point for plugins which refer to actions that can be performed.
