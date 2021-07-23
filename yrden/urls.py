@@ -18,8 +18,8 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import path, include
 
 urlpatterns = [
-    path("", include("frontend.urls")),
     path('admin/', admin.site.urls),
+    path('core/', include('core.urls'))
 ]
 
 urlpatterns += staticfiles_urlpatterns()
