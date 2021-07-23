@@ -1,0 +1,30 @@
+{% extends "core/layout.html" %}
+{% block title %}
+    Plugin Detail
+{% endblock %}
+{% block content %}
+    <h2>{{ plugin.name }} Details:</h2>
+
+    {% if plugin %}
+        <table class="plugin">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Interval</th>
+                    <th>Last Run</th>
+                    <th>Should Run</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ plugin.name }}</td>
+                    <td>{{ plugin.interval }}</td>
+                    <td>{{ plugin.last_run_datetime | date:'Y-M-d H:i:s' }}</td>
+                    <td>{{ plugin.should_run }}</td>
+                </tr>
+            </tbody>
+        </table>
+    {% else %}
+        <p>No plugins selected. See available plugins <a href="{% url 'core:' %}">here</a>.</p>
+    {% endif %}
+{% endblock %}
