@@ -1,12 +1,8 @@
-from django.shortcuts import render, get_object_or_404
 from django.db.models.query import QuerySet
-from django.http.response import HttpResponseRedirect
-from django.urls import reverse
-from django.urls.base import reverse_lazy
 from django.views import generic
-from django.utils import timezone
 
 from .models import Plugin
+from .forms import PluginCreateForm
 
 app_name = 'core'
 
@@ -30,4 +26,4 @@ class PluginDetailView(generic.DetailView):
 class PluginCreateView(generic.CreateView):
     template_name_suffix = '_create_form'
     model = Plugin
-    fields = ['name', 'interval', 'should_run']
+    form_class = PluginCreateForm
