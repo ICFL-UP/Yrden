@@ -1,10 +1,10 @@
 import logging
-from action_provider import ActionProvider
+from ..plugin_mount import PluginMount
 
 logger = logging.getLogger('insert2')
 
 
-class Insert2(ActionProvider):
+class Insert2(PluginMount):
 
     title = 'Insert2'
     view = 'insert2_detail'
