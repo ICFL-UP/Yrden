@@ -4,6 +4,10 @@ from django.views import generic
 from .models import Plugin
 from .forms import PluginCreateForm
 
+from .plugin.plugin_mount import PluginMount
+
+pm = PluginMount()
+
 app_name = 'core'
 
 
