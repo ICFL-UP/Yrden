@@ -1,0 +1,12 @@
+{% extends "core/layout.html" %}
+{% block title %}
+    Create Plugin
+{% endblock %}
+{% block content %}
+    <form action="." method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+        <button type="submit">Create Plugin</button>
+    </form>    
+{% endblock %}

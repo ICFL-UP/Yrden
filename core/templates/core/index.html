@@ -1,0 +1,34 @@
+{% extends "core/layout.html" %}
+{% block title %}
+    Home
+{% endblock %}
+{% block content %}
+    <h2>Plugins:</h2>
+
+    {% if plugin_list %}
+        <table class="plugin_list">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Interval</th>
+                    <th>Last Run</th>
+                    <th>Should Run</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plugin in plugin_list %}
+                    <tr>
+                        <td><a href="{% url 'core:detail' plugin.id %}">{{ plugin.name }}</a></td>
+                        <td>{{ plugin.interval }}</td>
+                        <td>{{ plugin.last_run_datetime | date:'Y-M-d H:i:s' }}</td>
+                        <td>{{ plugin.should_run }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No plugins added.</p>
+    {% endif %}
+
+    <p>Add new plugins <a href="{% url 'core:plugin_create_form' %}">here</a>.</p>
+{% endblock %}
