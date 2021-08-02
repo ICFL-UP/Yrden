@@ -1,3 +1,8 @@
+### Core
+# Ignore all plugins as we do not want them in git
+# A separate directory will be made for example plugins
+*/plugin/*/*
+
 ### VisualStudioCode ###
 .vscode
 .vscode/*
