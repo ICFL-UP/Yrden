@@ -1,9 +1,13 @@
+import subprocess
+import os
+
 from django.db.models.query import QuerySet
 from django.http.response import HttpResponse
 from django.views import generic
 
 from .models import Plugin
 from .forms import PluginCreateForm
+from .utils import extract_zip
 
 app_name = 'core'
 
@@ -30,27 +34,26 @@ class PluginCreateView(generic.CreateView):
     form_class = PluginCreateForm
 
     def form_valid(self, form: PluginCreateForm) -> HttpResponse:
-        # TODO: handle logic for installing the plugin
+        ZIP_NAME = 'plugin_zip_file'
+
+        plugin = form.save(commit=False)
+        plugin.hash_name = form.cleaned_data['hash_name']
+
+        file = form.cleaned_data[ZIP_NAME]
+        plugin_dir = 'core' + os.sep + 'plugin' + os.sep + form.cleaned_data['hash_name']
+        plugin.plugin_dest = plugin_dir
+        extract_zip(file, plugin_dir)
+        
+        # Create venv
+        # TODO: need to add functionality for specifying different python versions
+        venv_dest = plugin_dir + os.sep + '.venv'
+        form.cleaned_data['venv_dest'] = venv_dest
+        subprocess.run(['python', '-m', 'virtualenv', venv_dest, '-p', 'python'])
+
+        # Install requirements
+        python = venv_dest + os.sep + 'bin' + os.sep + 'python'
+        requirements = plugin_dir + os.sep + 'requirements.txt'
+        subprocess.run([python, '-m', 'pip', 'install', '-r', requirements])
+
+        plugin.save()
         return super().form_valid(form)
-
-
-# This should be moved out (only using this for testing until the crontabs are set up fully)
-# =============================================
-
-def walk_plugins(plugin: Plugin):
-    import os
-    import subprocess
-
-    dir = 'core/plugin'
-    for fname in os.listdir(dir):
-        main = dir + os.sep + fname + os.sep + 'main.py'
-        if fname.lower() == str(plugin.name).lower() and os.path.isfile(main):
-            process = subprocess.run(['python', main], check=True, stdout=subprocess.PIPE)
-            output = process.stdout
-
-
-qs = Plugin.objects.all()
-for plugin in qs:
-    walk_plugins(plugin)
-
-# =============================================
