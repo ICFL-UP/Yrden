@@ -1,6 +1,5 @@
 import datetime
 
-from django.utils import timezone
 from django.db import models
 from django.urls import reverse
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -18,7 +17,7 @@ class Plugin(models.Model):
     plugin_dest = models.CharField(max_length=1000, default='undefined')
 
     def __str__(self) -> str:
-        return self.name
+        return self.hash_name
 
     def get_absolute_url(self):
         return reverse('core:detail', args=[self.id])

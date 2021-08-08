@@ -26,7 +26,7 @@ class PluginCreateForm(forms.ModelForm):
             plugin = None
 
         if plugin:
-            raise forms.ValidationError(f'Plugin {data.name} already exists with name {plugin.name}')
+            raise forms.ValidationError(f'Plugin {plugin.name} already exists #{plugin.id}')
         else:
             self.cleaned_data['hash_name'] = hash
             return data
