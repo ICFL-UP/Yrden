@@ -1,30 +1,25 @@
 {% extends "core/layout.html" %}
+
 {% block title %}
     Plugin Detail
 {% endblock %}
-{% block content %}
-    <h2>{{ plugin.name }} Details:</h2>
-
+{% block container %}
+<div class="card">
     {% if plugin %}
-        <table class="plugin">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Interval</th>
-                    <th>Last Run</th>
-                    <th>Should Run</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>{{ plugin.name }}</td>
-                    <td>{{ plugin.interval }}</td>
-                    <td>{{ plugin.last_run_datetime | date:'Y-M-d H:i:s' }}</td>
-                    <td>{{ plugin.should_run }}</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="card-header">
+        <h5 class="card-title">Plugin Details: {{plugin.name}}</h5>
+    </div>
+
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Plugin Name</dt>
+            <dd class="col-sm-9">{{plugin.name}}</dd>
+            <dt class="col-sm-3">Interval</dt>
+            <dd class="col-sm-9">{{plugin.interval}}</dd>
+        </dl>
+    </div>
     {% else %}
         <p>No plugins selected. See available plugins <a href="{% url 'core:' %}">here</a>.</p>
     {% endif %}
+</div>
 {% endblock %}

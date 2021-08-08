@@ -1,56 +1,92 @@
+import subprocess
+import os
+
 from django.db.models.query import QuerySet
 from django.http.response import HttpResponse
-from django.views import generic
+from django.views.generic import ListView, DetailView, CreateView
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.urls import reverse_lazy
+from django.views.generic.edit import DeleteView, UpdateView
 
 from .models import Plugin
 from .forms import PluginCreateForm
+from .utils import extract_zip
 
 app_name = 'core'
 
 
-class PluginIndexView(generic.ListView):
+class PluginIndexView(ListView):
+    model = Plugin
     template_name = f'{app_name}/index.html'
-    context_object_name = 'plugin_list'
+    context_object_name = 'plugins'
+    paginate_by = 5
 
-    def get_queryset(self) -> QuerySet[Plugin]:
-        """
-        Return list of plugins for the system
-        """
-        return Plugin.objects.all()
+    def get_context_data(self, **kwargs):
+        context = super(PluginIndexView, self).get_context_data(**kwargs)
+        plugins = self.get_queryset()
+        page = self.request.GET.get('page')
+        paginator = Paginator(plugins, self.paginate_by)
+
+        try:
+            plugins = paginator.page
+        except PageNotAnInteger:
+            plugins = paginator.page(1)
+        except EmptyPage:
+            plugins = paginator.page(paginator.num_pages)
+
+        context['plugins'] = plugins
+        return context
 
 
-class PluginDetailView(generic.DetailView):
+class PluginDetailView(DetailView):
     model = Plugin
     template_name = f'{app_name}/plugin_detail.html'
+    context_object_name = 'plugin'
 
 
-class PluginCreateView(generic.CreateView):
-    template_name_suffix = '_create_form'
+class PluginCreateView(CreateView):
     model = Plugin
+    template_name_suffix = '_create_form'
     form_class = PluginCreateForm
+    success_url = reverse_lazy('core:index')
 
     def form_valid(self, form: PluginCreateForm) -> HttpResponse:
-        # TODO: handle logic for installing the plugin
+        ZIP_NAME = 'plugin_zip_file'
+
+        plugin = form.save(commit=False)
+        plugin.hash_name = form.cleaned_data['hash_name']
+
+        file = form.cleaned_data[ZIP_NAME]
+        plugin_dir = 'core' + os.sep + 'plugin' + os.sep + form.cleaned_data['hash_name']
+        plugin.plugin_dest = plugin_dir
+        extract_zip(file, plugin_dir)
+        
+        # Create venv
+        # TODO: need to add functionality for specifying different python versions
+        venv_dest = plugin_dir + os.sep + '.venv'
+        form.cleaned_data['venv_dest'] = venv_dest
+        subprocess.run(['python', '-m', 'virtualenv', venv_dest, '-p', 'python'])
+
+        # Install requirements
+        python = venv_dest + os.sep + 'bin' + os.sep + 'python'
+        requirements = plugin_dir + os.sep + 'requirements.txt'
+        subprocess.run([python, '-m', 'pip', 'install', '-r', requirements])
+
+        plugin.save()
         return super().form_valid(form)
 
 
-# This should be moved out (only using this for testing until the crontabs are set up fully)
-# =============================================
+class PluginUpdateView(UpdateView):
+    model = Plugin
+    template_name_suffix = '_update_form'
+    context_object_name = 'plugin'
+    fields = ('username', 'name', 'interval', 'should_run', )
 
-def walk_plugins(plugin: Plugin):
-    import os
-    import subprocess
-
-    dir = 'core/plugin'
-    for fname in os.listdir(dir):
-        main = dir + os.sep + fname + os.sep + 'main.py'
-        if fname.lower() == str(plugin.name).lower() and os.path.isfile(main):
-            process = subprocess.run(['python', main], check=True, stdout=subprocess.PIPE)
-            output = process.stdout
+    def get_success_url(self):
+        return reverse_lazy('core:plugin_detail', kwargs={'pk': self.object.id})
 
 
-qs = Plugin.objects.all()
-for plugin in qs:
-    walk_plugins(plugin)
-
-# =============================================
+class PluginDeleteView(DeleteView):
+    model = Plugin
+    template_name = f'{app_name}/plugin_delete.html'
+    success_url = reverse_lazy('core:index')

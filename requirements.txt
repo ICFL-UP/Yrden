@@ -1,6 +1,13 @@
 asgiref==3.4.1
+backports.entry-points-selectable==1.1.0
+distlib==0.3.2
 Django==3.2.6
 django-crontab==0.7.1
+filelock==3.0.12
 pkg_resources==0.0.0
+platformdirs==2.2.0
+pycrypto==2.6.1
 pytz==2021.1
+six==1.16.0
 sqlparse==0.4.1
+virtualenv==20.7.0

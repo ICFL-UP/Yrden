@@ -1,21 +1,20 @@
 {% extends "core/layout.html" %}
 
 {% block title %}
-    Create Plugin
+    Update Plugin
 {% endblock %}
 {% block container %}
 <div class="card">
     <div class="card-header">
-        <h5 class="card-title">Add New Plugin</h5>
+        <h5 class="card-title">Plugin Update #{{plugin.name}}</h5>
     </div>
     <div class="card-body">
-        <form action="." method="POST" enctype="multipart/form-data">
+        <form method="post">
             {% csrf_token %}
-    
+
             {{ form.as_p }}
-            <button type="submit" class="btn btn-success">Add Plugin</button>
-        </form>  
+            <button type="submit" class="btn btn-success">Update Plugin</button>
+        </form>
     </div>
 </div>
-      
 {% endblock %}
