@@ -55,21 +55,16 @@ class PluginCreateView(CreateView):
 
         plugin = form.save(commit=False)
         plugin.hash_name = form.cleaned_data['hash_name']
-
-        file = form.cleaned_data[ZIP_NAME]
-        plugin_dir = 'core' + os.sep + 'plugin' + os.sep + form.cleaned_data['hash_name']
-        plugin.plugin_dest = plugin_dir
-        extract_zip(file, plugin_dir)
         
         # Create venv
         # TODO: need to add functionality for specifying different python versions
-        venv_dest = plugin_dir + os.sep + '.venv'
-        form.cleaned_data['venv_dest'] = venv_dest
+        plugin.plugin_dest = 'core' + os.sep + 'plugin' + os.sep + form.cleaned_data['hash_name']
+        venv_dest = plugin.plugin_dest + os.sep + '.venv'
         subprocess.run(['python', '-m', 'virtualenv', venv_dest, '-p', 'python'])
 
         # Install requirements
         python = venv_dest + os.sep + 'bin' + os.sep + 'python'
-        requirements = plugin_dir + os.sep + 'requirements.txt'
+        requirements = plugin.plugin_dest + os.sep + 'requirements.txt'
         subprocess.run([python, '-m', 'pip', 'install', '-r', requirements])
 
         plugin.save()
