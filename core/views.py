@@ -1,5 +1,6 @@
 import subprocess
 import os
+import shutil
 
 from django.db.models.query import QuerySet
 from django.http.response import HttpResponse
@@ -10,7 +11,7 @@ from django.views.generic.edit import DeleteView, UpdateView
 
 from .models import Plugin
 from .forms import PluginCreateForm
-from .utils import extract_zip
+from .utils import delete_dir, extract_zip
 
 app_name = 'core'
 
@@ -85,3 +86,9 @@ class PluginDeleteView(DeleteView):
     model = Plugin
     template_name = f'{app_name}/plugin_delete.html'
     success_url = reverse_lazy('core:index')
+
+    def delete(self, request, *args: str, **kwargs):
+        object = self.get_object()
+        shutil.rmtree('core' + os.sep + 'plugin' + os.sep + object.hash_name)
+        # os.rmdir('core' + os.sep + 'plugin' + os.sep + object.hash_name)
+        return super().delete(request, *args, **kwargs)

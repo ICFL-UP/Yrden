@@ -1,3 +1,4 @@
+import os
 import hashlib
 import zipfile
 from pathlib import Path
@@ -41,3 +42,10 @@ def extract_zip(file, directory):
     """
     with zipfile.ZipFile(file, 'r') as zip_ref:
         zip_ref.extractall(directory)
+
+
+def delete_dir(directory):
+    """
+    Removes the specified directory
+    """
+    os.rmdir(directory)
