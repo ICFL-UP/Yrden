@@ -1,8 +1,9 @@
+import os
 from django import forms
 from django.core.validators import FileExtensionValidator
 
 from .models import Plugin
-from .utils import get_MD5
+from .utils import extract_zip, md5_dir
 
 class PluginCreateForm(forms.ModelForm):
     ZIP_NAME = 'plugin_zip_file'
@@ -20,7 +21,11 @@ class PluginCreateForm(forms.ModelForm):
         data = self.cleaned_data[self.ZIP_NAME]
 
         try:
-            hash = get_MD5(data)
+            # extract zip to `core/plugin/tmp/`
+            extract_zip(data, 'core/plugin/tmp/')
+            # calculate hash on `core/plugin/tmp/`
+            hash = md5_dir('core/plugin/tmp/')
+
             plugin: Plugin = Plugin.objects.get(hash_name=hash)
         except Plugin.DoesNotExist:
             plugin = None
@@ -28,5 +33,7 @@ class PluginCreateForm(forms.ModelForm):
         if plugin:
             raise forms.ValidationError(f'Plugin {plugin.name} already exists #{plugin.id}')
         else:
+            # rename `core/plugin/tmp/` to `core/plugin/hash/`
+            os.rename('core/plugin/tmp/', 'core/plugin/' + hash)
             self.cleaned_data['hash_name'] = hash
             return data
