@@ -21,10 +21,9 @@ class PluginCreateForm(forms.ModelForm):
         data = self.cleaned_data[self.ZIP_NAME]
 
         try:
-            # extract zip to `core/plugin/tmp/`
-            extract_zip(data, 'core/plugin/tmp/')
-            # calculate hash on `core/plugin/tmp/`
-            hash = md5_dir('core/plugin/tmp/')
+            tmp_dir = 'core' + os.sep + 'plugin' + os.sep + 'tmp'
+            extract_zip(data, tmp_dir)
+            hash = md5_dir(tmp_dir)
 
             plugin: Plugin = Plugin.objects.get(hash_name=hash)
         except Plugin.DoesNotExist:
@@ -33,7 +32,7 @@ class PluginCreateForm(forms.ModelForm):
         if plugin:
             raise forms.ValidationError(f'Plugin {plugin.name} already exists #{plugin.id}')
         else:
-            # rename `core/plugin/tmp/` to `core/plugin/hash/`
-            os.rename('core/plugin/tmp/', 'core/plugin/' + hash)
+            hash_dir = 'core' + os.sep + 'plugin' + os.sep + hash
+            os.rename(tmp_dir, hash_dir)
             self.cleaned_data['hash_name'] = hash
             return data
