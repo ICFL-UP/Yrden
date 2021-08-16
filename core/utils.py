@@ -1,39 +1,41 @@
 import os
-import hashlib
+from io import BufferedReader
+from typing import Union
+from Crypto.Hash import MD5
 import zipfile
-from pathlib import Path
 
 
-def md5_update_from_file(filename, hash):
-    assert Path(filename).is_file()
-    with open(str(filename), "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash.update(chunk)
-    return hash
-
-
-def md5_file(filename):
-    return md5_update_from_file(filename, hashlib.md5()).hexdigest()
-
-
-def md5_update_from_dir(directory, hash):
-    assert Path(directory).is_dir()
-    for path in sorted(Path(directory).iterdir()):
-        hash.update(path.name.encode())
-        if path.is_file():
-            hash = md5_update_from_file(path, hash)
-        elif path.is_dir():
-            hash = md5_update_from_dir(path, hash)
-    return hash
-
-
-def md5_dir(directory):
+def get_MD5(file: Union[BufferedReader, str]) -> str:
     """
-    Gets the hash of the contents of the specified directory.
-    Sorts the contents to ensure the hash is the same everytime
-    and any changes to any files will result in a different hash.
+    Creates a MD5 hash of a file
     """
-    return md5_update_from_dir(directory, hashlib.md5()).hexdigest()
+    buffered_file: BufferedReader = None
+    if isinstance(file, str):
+        buffered_file = open(file, 'rb')
+    else:
+        buffered_file = file
+
+
+    chunk_size = 8192
+
+    h = MD5.new()
+
+    while True:
+        chunk = buffered_file.read(chunk_size)
+        if len(chunk):
+            h.update(chunk)
+        else:
+            break
+
+    return h.hexdigest()
+
+
+def store_zip_file(file: BufferedReader, directory: str) -> None:
+    """Stores the file in the given directory"""
+    os.mkdir(directory)
+    with open(directory + os.sep + file.name, 'wb+') as destination:
+        for chunk in file.chunks():
+            destination.write(chunk)
 
 
 def extract_zip(file, directory):
