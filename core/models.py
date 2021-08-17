@@ -1,6 +1,7 @@
 import datetime
 
 from django.db import models
+from django.utils.timezone import make_aware
 from jsonfield import JSONField
 from django.core.validators import MaxValueValidator, MinValueValidator
 
@@ -20,7 +21,7 @@ class PluginSource(models.Model):
     upload_user: str = models.CharField(max_length=200, null=False)
 
     # json string of source file hashes
-    source_file_hash = JSONField()
+    source_file_hash: dict = JSONField()
 
     def __str__(self) -> str:
         return self.source_hash
@@ -38,7 +39,7 @@ class Plugin(models.Model):
     
     # last time the plugin ran
     last_run_datetime: datetime.datetime = models.DateTimeField(
-        default=datetime.datetime(1900, 1, 1, 0, 0, 0))
+        default=make_aware(datetime.datetime(1900, 1, 1, 0, 0, 0)))
     
     # should the plugin run or not
     should_run: bool = models.BooleanField(default=True)
@@ -48,6 +49,10 @@ class Plugin(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    def delete(self, *args, **kwargs):
+        self.plugin_source.delete()
+        return super(self.__class__, self).delete(*args, **kwargs)
 
 
 class PluginRun(models.Model):

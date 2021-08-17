@@ -40,10 +40,11 @@ class PluginSourceForm(forms.ModelForm):
             # store plugin source
             self.cleaned_data['source_hash'] = zip_hash
             self.cleaned_data['source_dest'] = 'core' + os.sep + 'source' + os.sep + zip_hash
-            store_zip_file(data, self.cleaned_data['source_dest'])
-
-            # build JSON of source files
-            # file: hash
+            
+            try:
+                store_zip_file(data, self.cleaned_data['source_dest'])
+            except FileExistsError:
+                raise forms.ValidationError(f'Plugin Source already exists')
 
             return data
 
