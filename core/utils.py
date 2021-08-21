@@ -16,7 +16,6 @@ def get_MD5(file: Union[BufferedReader, str]) -> str:
     else:
         buffered_file = file
 
-
     chunk_size = 8192
 
     h = MD5.new()

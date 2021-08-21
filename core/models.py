@@ -27,25 +27,38 @@ class PluginSource(models.Model):
         return self.source_hash
 
 
+# TODO: https://github.com/ICFL-UP/Yrden/issues/27
 class Plugin(models.Model):
-    plugin_source: PluginSource = models.OneToOneField(PluginSource, on_delete=models.CASCADE)
+    plugin_source: PluginSource = models.OneToOneField(
+        PluginSource, on_delete=models.CASCADE)
 
     # name of the plugin
     name: str = models.CharField(max_length=200, null=False)
-    
+
     # interval for when the plugin should run
     interval: int = models.PositiveIntegerField(
         default=5, validators=[MinValueValidator(5), MaxValueValidator(60)])
-    
+
     # last time the plugin ran
     last_run_datetime: datetime.datetime = models.DateTimeField(
         default=make_aware(datetime.datetime(1900, 1, 1, 0, 0, 0)))
-    
+
     # should the plugin run or not
     should_run: bool = models.BooleanField(default=True)
-    
+
     # plugin destination
     plugin_dest: str = models.CharField(max_length=1000, null=False)
+
+    # TODO: https://github.com/ICFL-UP/Yrden/issues/23
+    # status of plugin installing venv | installing deps | success | failed
+
+    # python_version /usr/bin/python3.8
+
+    # stdout of the subprocess run
+    # stdout = models.TextField()
+
+    # stderr of the subprocess run
+    # stderr = models.TextField()
 
     def __str__(self) -> str:
         return self.name
@@ -65,7 +78,7 @@ class PluginRun(models.Model):
 
     # Foreing key to the Plugin
     plugin: Plugin = models.ForeignKey(Plugin, on_delete=models.CASCADE)
-    
+
     # stdout of the subprocess run
     stdout = models.TextField()
 
@@ -74,12 +87,13 @@ class PluginRun(models.Model):
 
     # start time of the run
     execute_start_time: datetime.datetime = models.DateTimeField()
-    
+
     # duration of the run
     execute_duration = models.DurationField()
-    
+
     # status of the run
-    run_status = models.CharField(max_length=2, choices=RunStatus.choices, default=RunStatus.SUCCESS)
+    run_status = models.CharField(
+        max_length=2, choices=RunStatus.choices, default=RunStatus.SUCCESS)
 
     def __str__(self) -> str:
         return self.plugin.plugin_source.source_hash + '_' + self.execute_start_time

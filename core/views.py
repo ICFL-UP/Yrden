@@ -77,7 +77,9 @@ class PluginCreateView(CreateView):
         self.object = form.save(commit=False)
         self.object.source_dest = form.cleaned_data['source_dest']
         self.object.source_hash = form.cleaned_data['source_hash']
-        self.object.source_file_hash = build_zip_json(zipfile.ZipFile(form.cleaned_data['plugin_zip_file']))
+        # TODO: https://github.com/ICFL-UP/Yrden/issues/21
+        self.object.source_file_hash = build_zip_json(
+            zipfile.ZipFile(form.cleaned_data['plugin_zip_file']))
         self.object.upload_time = make_aware(datetime.datetime.now())
         self.object.upload_user = form.cleaned_data['upload_user']
         self.object.save()
@@ -89,25 +91,28 @@ class PluginCreateView(CreateView):
             f'upload_user={self.object.upload_user}\n',
             f'source_file_hash={self.object.source_file_hash}'
         ]
-        file_path = self.object.source_dest + os.sep + 'create_log_' + str(datetime.datetime.timestamp(self.object.upload_time)) + '.txt'
+        file_path = self.object.source_dest + os.sep + 'create_log_' + \
+            str(datetime.datetime.timestamp(self.object.upload_time)) + '.txt'
         with open(file_path, 'x') as file:
             file.writelines(write_lines)
 
         # save Plugin
         plugin = plugin_formset.save(commit=False)
-        # plugin = self.object
         plugin[0].plugin_source = self.object
-        plugin[0].plugin_dest = 'core' + os.sep + 'plugin' + os.sep + self.object.source_hash
-        extract_zip(form.cleaned_data['plugin_zip_file'], plugin[0].plugin_dest)
+        plugin[0].plugin_dest = 'core' + os.sep + \
+            'plugin' + os.sep + self.object.source_hash
+        extract_zip(
+            form.cleaned_data['plugin_zip_file'], plugin[0].plugin_dest)
         plugin[0].save()
 
-        # Create venv
-        # TODO: need to add functionality for specifying different python versions
-        venv_dest = plugin[0].plugin_dest + os.sep + '.venv'
-        subprocess.run(['python', '-m', 'virtualenv', venv_dest, '-p', 'python'])
-        python = venv_dest + os.sep + 'bin' + os.sep + 'python'
-        requirements = plugin[0].plugin_dest + os.sep + 'requirements.txt'
-        subprocess.run([python, '-m', 'pip', 'install', '-r', requirements])
+        # # Create venv
+        # # TODO: https://github.com/ICFL-UP/Yrden/issues/26
+        # venv_dest = plugin[0].plugin_dest + os.sep + '.venv'
+        # subprocess.run(['python', '-m', 'virtualenv',
+        #                venv_dest, '-p', 'python'])
+        # python = venv_dest + os.sep + 'bin' + os.sep + 'python'
+        # requirements = plugin[0].plugin_dest + os.sep + 'requirements.txt'
+        # subprocess.run([python, '-m', 'pip', 'install', '-r', requirements])
 
         return redirect(reverse("core:index"))
 
@@ -117,16 +122,6 @@ class PluginCreateView(CreateView):
                                   product_meta_formset=plugin_formset
                                   )
         )
-
-
-class PluginUpdateView(UpdateView):
-    model = Plugin
-    template_name_suffix = '_update_form'
-    context_object_name = 'plugin'
-    fields = ('username', 'name', 'interval', 'should_run', )
-
-    def get_success_url(self):
-        return reverse_lazy('core:plugin_detail', kwargs={'pk': self.object.id})
 
 
 class PluginDeleteView(DeleteView):
@@ -148,10 +143,12 @@ class PluginDeleteView(DeleteView):
             f'delete_user={user}\n',
             f'deleted_time={deleted_time}\n',
         ]
-        file_path = object.plugin_source.source_dest + os.sep + 'delete_log_' + str(datetime.datetime.timestamp(deleted_time)) + '.txt'
+        file_path = object.plugin_source.source_dest + os.sep + 'delete_log_' + \
+            str(datetime.datetime.timestamp(deleted_time)) + '.txt'
         with open(file_path, 'x') as file:
             file.writelines(write_lines)
 
-        shutil.move(source_dest, 'core' + os.sep + 'source' + os.sep + 'deleted_' + object.plugin_source.source_hash)
+        shutil.move(source_dest, 'core' + os.sep + 'source' +
+                    os.sep + 'deleted_' + object.plugin_source.source_hash)
 
         return super().delete(request, *args, **kwargs)

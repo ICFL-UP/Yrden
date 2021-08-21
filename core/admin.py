@@ -7,6 +7,7 @@ class PluginInline(admin.TabularInline):
     model = Plugin
     fk_name = 'plugin_source'
 
+
 @admin.register(PluginSource)
 class PluginSourceAdmin(admin.ModelAdmin):
     inlines = [

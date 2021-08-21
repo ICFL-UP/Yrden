@@ -16,7 +16,6 @@
             <th scope="col">Last Run</th>
             <th scope="col">Should Run</th>
             <th scope="col"></th>
-            <th scope="col"></th>
         </tr>
     </thead>
     <tbody>
@@ -28,9 +27,6 @@
             <td>{{ plugin.interval }}</td>
             <td>{{ plugin.last_run_datetime | date:'Y-M-d H:i:s' }}</td>
             <td>{{ plugin.should_run }}</td>
-            <td>
-                <a href="{% url 'core:plugin_update' plugin.id %}" class="btn btn-info">Update</a>
-            </td>
             <td>
                 <a href="{% url 'core:plugin_delete' plugin.id %}" class="btn btn-danger">Delete</a>
             </td>

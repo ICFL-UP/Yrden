@@ -27,20 +27,23 @@ class PluginSourceForm(forms.ModelForm):
             zip_hash: str = get_MD5(data)
 
             # validate plugin uniqueness
-            pluginSource: PluginSource = PluginSource.objects.get(source_hash = zip_hash)
+            pluginSource: PluginSource = PluginSource.objects.get(
+                source_hash=zip_hash)
 
         except PluginSource.DoesNotExist:
             pluginSource = None
 
         if pluginSource:
-            raise forms.ValidationError(f'Plugin {pluginSource.source_hash} already exists #{pluginSource.id}')
+            raise forms.ValidationError(
+                f'Plugin {pluginSource.source_hash} already exists #{pluginSource.id}')
         else:
             # if plugin does not exist
 
             # store plugin source
             self.cleaned_data['source_hash'] = zip_hash
-            self.cleaned_data['source_dest'] = 'core' + os.sep + 'source' + os.sep + zip_hash
-            
+            self.cleaned_data['source_dest'] = 'core' + \
+                os.sep + 'source' + os.sep + zip_hash
+
             try:
                 store_zip_file(data, self.cleaned_data['source_dest'])
             except FileExistsError:
@@ -55,4 +58,6 @@ class PluginForm(forms.ModelForm):
         fields = ['name', 'interval', 'should_run']
         exclude = ('plugin_source', )
 
-PluginFormSet = inlineformset_factory(PluginSource, Plugin, form=PluginForm, can_delete=False)
+
+PluginFormSet = inlineformset_factory(
+    PluginSource, Plugin, form=PluginForm, can_delete=False)
