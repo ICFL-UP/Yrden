@@ -30,7 +30,7 @@ class PluginSource(models.Model):
 # TODO: https://github.com/ICFL-UP/Yrden/issues/27
 class Plugin(models.Model):
     plugin_source: PluginSource = models.OneToOneField(
-        PluginSource, on_delete=models.CASCADE)
+        PluginSource, on_delete=models.DO_NOTHING)
 
     # name of the plugin
     name: str = models.CharField(max_length=200, null=False)
@@ -64,7 +64,6 @@ class Plugin(models.Model):
         return self.name
 
     def delete(self, *args, **kwargs):
-        self.plugin_source.delete()
         return super(self.__class__, self).delete(*args, **kwargs)
 
 
@@ -77,7 +76,7 @@ class PluginRun(models.Model):
         TIMED_OUT = 'TO'
 
     # Foreing key to the Plugin
-    plugin: Plugin = models.ForeignKey(Plugin, on_delete=models.CASCADE)
+    plugin: Plugin = models.ForeignKey(Plugin, on_delete=models.DO_NOTHING)
 
     # stdout of the subprocess run
     stdout = models.TextField()

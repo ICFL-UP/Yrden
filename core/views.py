@@ -1,5 +1,7 @@
+import json
 from typing import Any
 import zipfile
+from django.db.models.query import QuerySet
 from django.forms.models import BaseModelForm
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse
@@ -80,27 +82,29 @@ class PluginCreateView(CreateView):
         # TODO: https://github.com/ICFL-UP/Yrden/issues/21
         self.object.source_file_hash = build_zip_json(
             zipfile.ZipFile(form.cleaned_data['plugin_zip_file']))
-        self.object.upload_time = make_aware(datetime.datetime.now())
+        self.object.upload_time = form.cleaned_data['upload_time']
         self.object.upload_user = form.cleaned_data['upload_user']
         self.object.save()
 
-        write_lines = [
-            f'{self.object.source_hash}_{datetime.datetime.timestamp(self.object.upload_time)}\n',
-            f'source_dest={self.object.source_dest}\n',
-            f'upload_time={self.object.upload_time}\n',
-            f'upload_user={self.object.upload_user}\n',
-            f'source_file_hash={self.object.source_file_hash}'
-        ]
-        file_path = self.object.source_dest + os.sep + 'create_log_' + \
-            str(datetime.datetime.timestamp(self.object.upload_time)) + '.txt'
+        log_json: dict = {
+            'log_datetime': datetime.datetime.timestamp(datetime.datetime.now()),
+            'source_dest': self.object.source_dest,
+            'source_hash': self.object.source_hash,
+            'upload_time': self.object.upload_time.strftime("%m/%d/%Y, %H:%M:%S"),
+            'upload_user': self.object.upload_user,
+            'source_file_hash': json.loads(self.object.source_file_hash)
+        }
+        file_path = self.object.source_dest + os.sep + 'create' + \
+            str(datetime.datetime.timestamp(self.object.upload_time)) + '.json'
         with open(file_path, 'x') as file:
-            file.writelines(write_lines)
+            file.write(json.dumps(log_json))
 
         # save Plugin
         plugin = plugin_formset.save(commit=False)
         plugin[0].plugin_source = self.object
         plugin[0].plugin_dest = 'core' + os.sep + \
-            'plugin' + os.sep + self.object.source_hash
+            'plugin' + os.sep + self.object.source_hash + '_' +  \
+            str(datetime.datetime.timestamp(self.object.upload_time))
         extract_zip(
             form.cleaned_data['plugin_zip_file'], plugin[0].plugin_dest)
         plugin[0].save()
@@ -137,18 +141,28 @@ class PluginDeleteView(DeleteView):
         shutil.rmtree(object.plugin_dest)
 
         deleted_time = datetime.datetime.now()
+        deleted_dest = 'core' + os.sep + 'source' + os.sep + 'deleted_' + object.plugin_source.source_hash + \
+            '_' + str(datetime.datetime.timestamp(object.plugin_source.upload_time))
 
-        write_lines = [
-            f'{object.plugin_source.source_hash}_{datetime.datetime.timestamp(deleted_time)}\n',
-            f'delete_user={user}\n',
-            f'deleted_time={deleted_time}\n',
-        ]
-        file_path = object.plugin_source.source_dest + os.sep + 'delete_log_' + \
-            str(datetime.datetime.timestamp(deleted_time)) + '.txt'
+        log_json: dict = {
+            'log_datetime': datetime.datetime.timestamp(deleted_time),
+            'source_dest': object.plugin_source.source_dest,
+            'source_hash': object.plugin_source.source_hash,
+            'upload_time': object.plugin_source.upload_time.strftime("%m/%d/%Y, %H:%M:%S"),
+            'upload_user': object.plugin_source.upload_user,
+            'source_file_hash': json.loads(object.plugin_source.source_file_hash),
+            'username': user,
+            'deleted_dest': deleted_dest
+        }
+        file_path = object.plugin_source.source_dest + os.sep + 'delete' + \
+            str(datetime.datetime.timestamp(deleted_time)) + '.json'
         with open(file_path, 'x') as file:
-            file.writelines(write_lines)
+            file.write(json.dumps(log_json))
 
-        shutil.move(source_dest, 'core' + os.sep + 'source' +
-                    os.sep + 'deleted_' + object.plugin_source.source_hash)
+        shutil.move(source_dest, deleted_dest)
+
+        object.plugin_source.source_hash = 'deleted_' + object.plugin_source.source_hash
+        object.plugin_source.source_dest = deleted_dest
+        object.plugin_source.save()
 
         return super().delete(request, *args, **kwargs)
