@@ -2,8 +2,8 @@ import datetime
 
 from django.db import models
 from django.utils.timezone import make_aware
-from jsonfield import JSONField
 from django.core.validators import MaxValueValidator, MinValueValidator
+from jsonfield import JSONField
 
 
 class PluginSource(models.Model):
@@ -79,20 +79,20 @@ class PluginRun(models.Model):
     plugin: Plugin = models.ForeignKey(Plugin, on_delete=models.DO_NOTHING)
 
     # stdout of the subprocess run
-    stdout = models.TextField()
+    stdout = models.TextField(null=True)
 
     # stderr of the subprocess run
-    stderr = models.TextField()
+    stderr = models.TextField(null=True)
 
     # start time of the run
     execute_start_time: datetime.datetime = models.DateTimeField()
 
     # duration of the run
-    execute_duration = models.DurationField()
+    execute_duration = models.DurationField(null=True)
 
     # status of the run
     run_status = models.CharField(
         max_length=2, choices=RunStatus.choices, default=RunStatus.SUCCESS)
 
     def __str__(self) -> str:
-        return self.plugin.plugin_source.source_hash + '_' + self.execute_start_time
+        return self.plugin.plugin_source.source_hash + '_' + str(self.execute_start_time)

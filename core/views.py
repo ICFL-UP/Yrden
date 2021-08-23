@@ -1,26 +1,26 @@
+import os
 import json
-from typing import Any
+import shutil
+import datetime
 import zipfile
+
+from typing import Any
 from django.db.models.query import QuerySet
 from django.forms.models import BaseModelForm
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse
-from core.utils import build_zip_json, extract_zip
-import subprocess
-import os
-import shutil
-import datetime
-
 from django.views.generic import ListView, DetailView, CreateView
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.urls import reverse_lazy
-from django.views.generic.edit import DeleteView, UpdateView
+from django.views.generic.edit import DeleteView
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.timezone import make_aware
 
-from .models import Plugin
-from .forms import PluginFormSet, PluginSourceForm
+from core.utils import build_zip_json, create_venv, extract_zip
+from core.models import Plugin, PluginRun
+from core.forms import PluginFormSet, PluginSourceForm
+from core.run import Run
 
 app_name = 'core'
 
@@ -109,14 +109,7 @@ class PluginCreateView(CreateView):
             form.cleaned_data['plugin_zip_file'], plugin[0].plugin_dest)
         plugin[0].save()
 
-        # # Create venv
-        # # TODO: https://github.com/ICFL-UP/Yrden/issues/26
-        # venv_dest = plugin[0].plugin_dest + os.sep + '.venv'
-        # subprocess.run(['python', '-m', 'virtualenv',
-        #                venv_dest, '-p', 'python'])
-        # python = venv_dest + os.sep + 'bin' + os.sep + 'python'
-        # requirements = plugin[0].plugin_dest + os.sep + 'requirements.txt'
-        # subprocess.run([python, '-m', 'pip', 'install', '-r', requirements])
+        create_venv(plugin[0])
 
         return redirect(reverse("core:index"))
 
@@ -166,3 +159,15 @@ class PluginDeleteView(DeleteView):
         object.plugin_source.save()
 
         return super().delete(request, *args, **kwargs)
+
+
+def runPlugins(reuqest: HttpRequest):
+    plugins: QuerySet[Plugin] = Plugin.objects.get_queryset()
+
+    for plugin in plugins:
+        should_run = make_aware(datetime.datetime.now()
+                                ) - plugin.last_run_datetime > datetime.timedelta(minutes=plugin.interval)
+
+        if should_run:
+            run = Run(plugin)
+            run.start()

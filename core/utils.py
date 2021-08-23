@@ -1,9 +1,14 @@
 import os
+import json
+import zipfile
+import datetime
+import subprocess
+
 from io import BufferedReader
 from typing import Union
-from Crypto.Hash import MD5
-import zipfile
-import json
+from hashlib import md5
+
+from core.models import Plugin
 
 
 def get_MD5(file: Union[BufferedReader, str]) -> str:
@@ -18,7 +23,7 @@ def get_MD5(file: Union[BufferedReader, str]) -> str:
 
     chunk_size = 8192
 
-    h = MD5.new()
+    h = md5()
 
     while True:
         chunk = buffered_file.read(chunk_size)
@@ -62,3 +67,22 @@ def build_zip_json(zip: zipfile.ZipFile) -> str:
                 data[name] = get_MD5(memberFile)
 
     return json.dumps(data)
+
+
+def datetime_to_string(datetime: datetime.datetime) -> str:
+    return datetime.strftime("%m/%d/%Y, %H:%M:%S")
+
+
+# TODO: https://github.com/ICFL-UP/Yrden/issues/26
+def create_venv(plugin: Plugin):
+    """
+    Create virtual env for the specified plugin
+    """
+    venv_dest = plugin.plugin_dest + os.sep + '.venv'
+    subprocess.run(['python', '-m', 'virtualenv',
+                    venv_dest, '-p', 'python'])
+
+    python = venv_dest + os.sep + 'bin' + os.sep + 'python'
+    requirements = plugin[0].plugin_dest + os.sep + 'requirements.txt'
+    subprocess.run(
+        [python, '-m', 'pip', 'install', '-r', requirements])

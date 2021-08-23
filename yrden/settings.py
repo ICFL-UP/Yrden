@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_crontab',
+    'kronos',
     'core.apps.CoreConfig',
 ]
 
@@ -125,15 +125,3 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Cron Jobs
-
-CRONTAB_LOCK_JOBS = True
-
-CRONJOBS = [
-    # Can add *args and **kwargs
-    (
-        '*/5 * * * *', 'core.cron.run_plugin_modules_5_job',
-        '>> /tmp/run_plugin_modules_5_job.log'
-    ),
-]
