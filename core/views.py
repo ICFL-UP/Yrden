@@ -1,3 +1,4 @@
+import logging
 import os
 import json
 import shutil
@@ -17,17 +18,19 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.timezone import make_aware
 
-from core.utils import build_zip_json, create_venv, extract_zip
+from core.utils import build_zip_json, create_venv, extract_zip, validate_plugin_hash
 from core.models import Plugin, PluginRun
 from core.forms import PluginFormSet, PluginSourceForm
 from core.run import Run
+from core.exceptions import HashJSONFailedException
 
-app_name = 'core'
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(levelname)s] (%(threadName)-9s) %(message)s',)
 
 
 class PluginIndexView(ListView):
     model = Plugin
-    template_name = f'{app_name}/index.html'
+    template_name = 'core/index.html'
     context_object_name = 'plugins'
     paginate_by = 5
 
@@ -50,7 +53,7 @@ class PluginIndexView(ListView):
 
 class PluginDetailView(DetailView):
     model = Plugin
-    template_name = f'{app_name}/plugin_detail.html'
+    template_name = 'core/plugin_detail.html'
     context_object_name = 'plugin'
 
 
@@ -123,7 +126,7 @@ class PluginCreateView(CreateView):
 
 class PluginDeleteView(DeleteView):
     model = Plugin
-    template_name = f'{app_name}/plugin_delete.html'
+    template_name = 'core/plugin_delete.html'
     success_url = reverse_lazy('core:index')
 
     def delete(self, request: HttpRequest, *args: str, **kwargs: Any) -> HttpResponse:
@@ -171,3 +174,13 @@ def runPlugins(reuqest: HttpRequest):
         if should_run:
             run = Run(plugin)
             run.start()
+
+
+def validate_plugins(request: HttpRequest):
+    plugins: QuerySet[Plugin] = Plugin.objects.get_queryset()
+
+    for plugin in plugins:
+        try:
+            validate_plugin_hash(plugin)
+        except HashJSONFailedException as hf:
+            logging.error(f'Error {hf}')

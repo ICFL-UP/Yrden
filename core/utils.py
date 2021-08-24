@@ -3,12 +3,17 @@ import json
 import zipfile
 import datetime
 import subprocess
+import logging
 
 from io import BufferedReader
 from typing import Union
 from hashlib import md5
 
 from core.models import Plugin
+from core.exceptions import HashJSONFailedException
+
+logging.basicConfig(level=logging.DEBUG,
+                    format='[%(levelname)s] (%(threadName)-9s) %(message)s',)
 
 
 def get_MD5(file: Union[BufferedReader, str]) -> str:
@@ -86,3 +91,32 @@ def create_venv(plugin: Plugin):
     requirements = plugin[0].plugin_dest + os.sep + 'requirements.txt'
     subprocess.run(
         [python, '-m', 'pip', 'install', '-r', requirements])
+
+
+# TODO: Need to raise warning if extra files not in JSON
+def validate_dir(directory: str, relative_path: str, hash_dict: dict):
+    """
+    Recursive method to validate subdirectories
+    """
+    for filename in os.listdir(directory):
+        f = os.path.join(directory, filename)
+
+        if os.path.isfile(f):
+            source_hash = hash_dict[relative_path + filename]
+            plugin_hash = get_MD5(f)
+
+            if source_hash != plugin_hash:
+                raise HashJSONFailedException(
+                    f'Hash for {relative_path + filename} [{source_hash}] does not match computed hash [{plugin_hash}]')
+
+        elif os.path.isdir(f) and filename != '.venv':
+            validate_dir(directory + os.sep + filename, relative_path +
+                         filename + '/', hash_dict)
+
+
+def validate_plugin_hash(plugin: Plugin) -> bool:
+    """
+    Validate the plugin source file hashes
+    """
+    validate_dir(plugin.plugin_dest, '', json.loads(
+        plugin.plugin_source.source_file_hash))

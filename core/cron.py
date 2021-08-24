@@ -10,6 +10,7 @@ from core.models import Plugin
 from core.run import Run
 
 
+# https://github.com/jgorset/django-kronos
 @kronos.register('* * * * *')
 def run_plugins():
     plugins: QuerySet[Plugin] = Plugin.objects.get_queryset()

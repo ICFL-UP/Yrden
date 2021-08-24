@@ -7,7 +7,8 @@ import logging
 from django.utils.timezone import make_aware
 
 from core.models import Plugin, PluginRun
-from core.utils import datetime_to_string
+from core.utils import datetime_to_string, validate_plugin_hash
+from core.exceptions import HashJSONFailedException
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] (%(threadName)-9s) %(message)s',)
@@ -27,13 +28,14 @@ class Run(threading.Thread):
         python = self.plugin_run.plugin.plugin_dest + os.sep + \
             '.venv' + os.sep + 'bin' + os.sep + 'python'
 
-        # TODO: set status to HF if hash validation fails
         try:
             start_time = make_aware(datetime.datetime.now())
             self.plugin_run.plugin.last_run_datetime = start_time
             self.plugin_run.plugin.save()
 
             self.plugin_run.execute_start_time = start_time
+
+            validate_plugin_hash(self.plugin_run.plugin)
 
             completedProcess: subprocess.CompletedProcess = subprocess.run(
                 [python, main],
@@ -57,6 +59,9 @@ class Run(threading.Thread):
             self.plugin_run.run_status = PluginRun.RunStatus.FAILED
             self.plugin_run.stdout = cpe.stdout
             self.plugin_run.stderr = cpe.stderr
+        except HashJSONFailedException as hf:
+            self.plugin_run.run_status = PluginRun.RunStatus.HASH_FAILED
+            self.plugin_run.stderr = f'Error {hf}'
 
         self.plugin_run.save()
 
