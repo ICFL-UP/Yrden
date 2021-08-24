@@ -1,26 +1,28 @@
-from django.utils import timezone
+import os
+import sys
+import datetime
+import kronos
+
+from django.db.models.query import QuerySet
+from django.utils.timezone import make_aware
+
+from core.models import Plugin
+from core.run import Run
 
 
-def run_plugin_modules_5_job():
-    print('running job ' + timezone.now().strftime('%Y-%m-%d %H:%M:%S'))
+# https://github.com/jgorset/django-kronos
+@kronos.register('* * * * *')
+def run_plugins():
+    plugins: QuerySet[Plugin] = Plugin.objects.get_queryset()
 
-# This should be moved out (only using this for testing until the crontabs are set up fully)
-# =============================================
+    # set working dir so plugin paths work
+    os.chdir(os.path.dirname(sys.argv[0]))
 
-# def walk_plugins(plugin: Plugin):
-#     import os
-#     import subprocess
+    for plugin in plugins:
+        print(f'RUNNING PLUGIN: {plugin.name}')
+        should_run = make_aware(datetime.datetime.now()
+                                ) - plugin.last_run_datetime > datetime.timedelta(minutes=plugin.interval)
 
-#     dir = 'core/plugin'
-#     for fname in os.listdir(dir):
-#         main = dir + os.sep + fname + os.sep + 'main.py'
-#         if fname.lower() == str(plugin.name).lower() and os.path.isfile(main):
-#             process = subprocess.run(['python', main], check=True, stdout=subprocess.PIPE)
-#             output = process.stdout
-
-
-# qs = Plugin.objects.all()
-# for plugin in qs:
-#     walk_plugins(plugin)
-
-# =============================================
+        if should_run:
+            run = Run(plugin)
+            run.start()

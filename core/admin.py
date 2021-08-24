@@ -1,16 +1,35 @@
 from django.contrib import admin
+from django.http.request import HttpRequest
 
-from .models import Plugin
+from .models import Plugin, PluginSource, PluginRun
 
 
-class PluginAdmin(admin.ModelAdmin):
-    fieldsets = [
-        (None,              {'fields': ['username', 'name', 'hash_name', 'interval', 'should_run', 'plugin_dest']}),
-        ('Last Run Time',   {'fields': ['last_run_datetime']}),
+class PluginInline(admin.TabularInline):
+    model = Plugin
+    fk_name = 'plugin_source'
+
+
+@admin.register(PluginSource)
+class PluginSourceAdmin(admin.ModelAdmin):
+    inlines = [
+        PluginInline
     ]
 
-    list_display = ('username', 'name', 'hash_name', 'interval', 'last_run_datetime', 'should_run', 'plugin_dest')
-    search_fields = ['name']
+
+class PluginRunInline(admin.TabularInline):
+    model = PluginRun
+    fk_name = 'plugin'
+    extra = 0
 
 
-admin.site.register(Plugin, PluginAdmin)
+@admin.register(Plugin)
+class PluginAdmin(admin.ModelAdmin):
+    inlines = [
+        PluginRunInline
+    ]
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

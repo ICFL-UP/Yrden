@@ -11,11 +11,39 @@
     </div>
 
     <div class="card-body">
+        <h5>Plugin Source Details:</h5>
+        <dl class="row">
+            <dt class="col-sm-3">Source Destination</dt>
+            <dd class="col-sm-9">{{plugin.plugin_source.source_dest}}</dd>
+
+            <dt class="col-sm-3">Source Hash</dt>
+            <dd class="col-sm-9">{{plugin.plugin_source.source_hash}}</dd>
+
+            <dt class="col-sm-3">Upload Time</dt>
+            <dd class="col-sm-9">{{plugin.plugin_source.upload_time}}</dd>
+
+            <dt class="col-sm-3">Upload User</dt>
+            <dd class="col-sm-9">{{plugin.plugin_source.upload_user}}</dd>
+
+            <dt class="col-sm-3">Source File Hashes</dt>
+            <dd class="col-sm-9">{{plugin.plugin_source.source_file_hash}}</script></dd>
+        </dl>
+        <h5>Plugin Details:</h5>
         <dl class="row">
             <dt class="col-sm-3">Plugin Name</dt>
             <dd class="col-sm-9">{{plugin.name}}</dd>
-            <dt class="col-sm-3">Interval</dt>
+
+            <dt class="col-sm-3">Plugin Interval</dt>
             <dd class="col-sm-9">{{plugin.interval}}</dd>
+
+            <dt class="col-sm-3">Plugin Last Run Datetime</dt>
+            <dd class="col-sm-9">{{plugin.last_run_datetime}}</dd>
+
+            <dt class="col-sm-3">Plugin Should Run</dt>
+            <dd class="col-sm-9">{{plugin.should_run}}</dd>
+
+            <dt class="col-sm-3">Plugin Destination</dt>
+            <dd class="col-sm-9">{{plugin.plugin_dest}}</script></dd>
         </dl>
     </div>
     {% else %}

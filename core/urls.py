@@ -10,6 +10,8 @@ urlpatterns = [
     path('plugin/', views.PluginCreateView.as_view(),
          name='plugin_create_form'),
     path('plugin/<int:pk>', views.PluginDetailView.as_view(), name='plugin_detail'),
-    path('plugin/<int:pk>/update', views.PluginUpdateView.as_view(), name='plugin_update'),
-    path('plugin/<int:pk>/delete', views.PluginDeleteView.as_view(), name='plugin_delete'),
+    path('plugin/<int:pk>/delete',
+         views.PluginDeleteView.as_view(), name='plugin_delete'),
+    path('plugin/run/', views.runPlugins, name='run_plugins'),
+    path('plugin/validate/', views.validate_plugins, name='validate_plugins'),
 ]

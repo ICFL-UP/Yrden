@@ -12,7 +12,14 @@
         <form action="." method="POST" enctype="multipart/form-data">
             {% csrf_token %}
     
+            {{ form.non_form_errors }}
             {{ form.as_p }}
+
+            {{ plugin_formset.non_form_errors }}
+            {{ plugin_formset.management_form }}
+            {% for formset in plugin_formset %}
+                {{ formset.as_p }}
+            {% endfor %}
             <button type="submit" class="btn btn-success">Add Plugin</button>
         </form>  
     </div>
