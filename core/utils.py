@@ -1,16 +1,20 @@
+import io
 import os
 import json
 import zipfile
-import datetime
 import subprocess
 import logging
 
 from io import BufferedReader
 from typing import Union
 from hashlib import md5
+from django.utils import timezone
+from datetime import datetime
 
-from core.models import Plugin
+from core.models import Plugin, PluginSource
+from core.enums.log_type_enum import LogType
 from core.exceptions import HashJSONFailedException
+from core.enums.plugin_status import PluginStatus
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] (%(threadName)-9s) %(message)s',)
@@ -56,7 +60,7 @@ def extract_zip(file: BufferedReader, directory: str):
         zip.extractall(directory)
 
 
-def build_zip_json(zip: zipfile.ZipFile) -> str:
+def build_zip_json(zip_bytes: io.BytesIO, plugin_source: PluginSource) -> None:
     """
     Builds a JSON file of the zip contents hashing each file and storing the hash.
     {
@@ -66,16 +70,38 @@ def build_zip_json(zip: zipfile.ZipFile) -> str:
     """
     data = {}
 
+    zip = zipfile.ZipFile(zip_bytes)
     for name in zip.namelist():
         if not name.endswith('/'):
             with zipfile.ZipFile.open(zip, name) as memberFile:
                 data[name] = get_MD5(memberFile)
 
-    return json.dumps(data)
+    plugin_source.source_file_hash = json.dumps(data)
+    plugin_source.save()
+
+    log_json: dict = {
+        'log_datetime': datetime.timestamp(timezone.now()),
+        'source_dest': plugin_source.source_dest,
+        'source_hash': plugin_source.source_hash,
+        'source_file_hash': json.loads(plugin_source.source_file_hash),
+    }
+    write_log(LogType.HASH_LIST, plugin_source, log_json)
 
 
-def datetime_to_string(datetime: datetime.datetime) -> str:
-    return datetime.strftime("%m/%d/%Y, %H:%M:%S")
+def datetime_to_string(timezone: timezone) -> str:
+    return datetime.strftime(timezone, "%m/%d/%Y, %H:%M:%S")
+
+
+def write_log(log_type: LogType, plugin_source: PluginSource, log: dict) -> None:
+    path = plugin_source.source_dest + os.sep + log_type.value + '_' + \
+        str(datetime.timestamp(plugin_source.upload_time)) + '.json'
+
+    with open(path, 'x') as file:
+        file.write(json.dumps(log))
+
+
+def run_subprocess(command: 'list[str]', timeout=None) -> subprocess.CompletedProcess:
+    return subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
 
 
 # TODO: https://github.com/ICFL-UP/Yrden/issues/26
@@ -83,17 +109,56 @@ def create_venv(plugin: Plugin):
     """
     Create virtual env for the specified plugin
     """
-    venv_dest = plugin.plugin_dest + os.sep + '.venv'
-    subprocess.run(['python', '-m', 'virtualenv',
-                    venv_dest, '-p', 'python'])
+    try:
+        plugin.status = PluginStatus.VIRTUALENV
+        plugin.save()
 
-    python = venv_dest + os.sep + 'bin' + os.sep + 'python'
-    requirements = plugin[0].plugin_dest + os.sep + 'requirements.txt'
-    subprocess.run(
-        [python, '-m', 'pip', 'install', '-r', requirements])
+        venv_dest = plugin.plugin_dest + os.sep + '.venv'
+
+        venv_command = [
+            'python',
+            '-m',
+            'virtualenv',
+            venv_dest,
+            '-p',
+            'python'
+        ]
+        venv_process: subprocess.CompletedProcess = run_subprocess(
+            venv_command)
+
+        plugin.status = PluginStatus.DEPENDECIES
+        plugin.stdout = venv_process.stdout.decode('utf-8')
+        plugin.stderr = venv_process.stderr.decode('utf-8')
+        plugin.save()
+
+        python = venv_dest + os.sep + 'bin' + os.sep + 'python'
+        requirements = plugin.plugin_dest + os.sep + 'requirements.txt'
+
+        deps_command = [
+            python,
+            '-m',
+            'pip',
+            'install',
+            '-r',
+            requirements
+        ]
+        deps_process: subprocess.CompletedProcess = run_subprocess(
+            deps_command)
+
+        plugin.status = PluginStatus.SUCCESS
+        plugin.stdout = deps_process.stdout.decode('utf-8')
+        plugin.stderr = deps_process.stderr.decode('utf-8')
+        plugin.save()
+    except subprocess.CalledProcessError as cpe:
+        plugin.status = PluginStatus.Failed
+        plugin.stdout = cpe.stdout.decode('utf-8')
+        plugin.stderr = cpe.stderr.decode('utf-8')
+        plugin.save()
+
+    plugin.save()
 
 
-# TODO: Need to raise warning if extra files not in JSON
+# TODO: https://github.com/ICFL-UP/Yrden/issues/29
 def validate_dir(directory: str, relative_path: str, hash_dict: dict):
     """
     Recursive method to validate subdirectories

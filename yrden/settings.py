@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'kronos',
+    'django_admin_inline_paginator',
     'core.apps.CoreConfig',
 ]
 
@@ -125,3 +126,7 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# CUSTOM
+
+PLUGIN_RUN_TIMEOUT = 300  # 5 minutes

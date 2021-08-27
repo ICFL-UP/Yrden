@@ -5,6 +5,7 @@ certifi==2021.5.30
 charset-normalizer==2.0.4
 distlib==0.3.2
 Django==3.2.6
+django-admin-inline-paginator==0.2
 django-extra-views==0.14.0
 django-kronos==1.0
 filelock==3.0.12

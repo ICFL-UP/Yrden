@@ -12,6 +12,4 @@ urlpatterns = [
     path('plugin/<int:pk>', views.PluginDetailView.as_view(), name='plugin_detail'),
     path('plugin/<int:pk>/delete',
          views.PluginDeleteView.as_view(), name='plugin_delete'),
-    path('plugin/run/', views.runPlugins, name='run_plugins'),
-    path('plugin/validate/', views.validate_plugins, name='validate_plugins'),
 ]

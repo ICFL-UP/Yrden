@@ -1,10 +1,11 @@
 import os
-import datetime
+
 from io import BufferedReader
+from datetime import datetime
 from django import forms
 from django.core.validators import FileExtensionValidator
 from django.forms.models import inlineformset_factory
-from django.utils.timezone import make_aware
+from django.utils import timezone
 
 from .models import Plugin, PluginSource
 from .utils import get_MD5, store_zip_file
@@ -25,7 +26,7 @@ class PluginSourceForm(forms.ModelForm):
         data: BufferedReader = self.cleaned_data[self.ZIP_NAME]
 
         try:
-            upload_time = make_aware(datetime.datetime.now())
+            upload_time = timezone.now()
             zip_hash: str = get_MD5(data)
 
             # validate plugin uniqueness
@@ -47,7 +48,7 @@ class PluginSourceForm(forms.ModelForm):
             # store plugin source
             self.cleaned_data['source_dest'] = 'core' + \
                 os.sep + 'source' + os.sep + zip_hash + '_' + \
-                str(datetime.datetime.timestamp(upload_time))
+                str(datetime.timestamp(upload_time))
             self.cleaned_data['source_hash'] = zip_hash
             self.cleaned_data['upload_time'] = upload_time
 

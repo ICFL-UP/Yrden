@@ -1,14 +1,15 @@
 import os
 import threading
 import subprocess
-import datetime
 import logging
 
-from django.utils.timezone import make_aware
+from django.conf import settings
+from django.utils import timezone
 
 from core.models import Plugin, PluginRun
-from core.utils import datetime_to_string, validate_plugin_hash
+from core.utils import datetime_to_string, run_subprocess, validate_plugin_hash
 from core.exceptions import HashJSONFailedException
+from core.enums.run_status import RunStatus
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] (%(threadName)-9s) %(message)s',)
@@ -29,38 +30,37 @@ class Run(threading.Thread):
             '.venv' + os.sep + 'bin' + os.sep + 'python'
 
         try:
-            start_time = make_aware(datetime.datetime.now())
+            start_time = timezone.now()
             self.plugin_run.plugin.last_run_datetime = start_time
             self.plugin_run.plugin.save()
 
-            self.plugin_run.execute_start_time = start_time
-
             validate_plugin_hash(self.plugin_run.plugin)
 
-            completedProcess: subprocess.CompletedProcess = subprocess.run(
-                [python, main],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                timeout=300,  # 5 minutes
-            )
+            self.plugin_run.execute_start_time = start_time
 
-            end_time = make_aware(datetime.datetime.now())
+            command = [
+                python,
+                main
+            ]
+            completedProcess: subprocess.CompletedProcess = run_subprocess(
+                command, settings.PLUGIN_RUN_TIMEOUT)
 
-            self.plugin_run.run_status = PluginRun.RunStatus.SUCCESS
-            self.plugin_run.stdout = completedProcess.stdout
-            self.plugin_run.stderr = completedProcess.stderr
+            end_time = timezone.now()
+
+            self.plugin_run.run_status = RunStatus.SUCCESS
+            self.plugin_run.stdout = completedProcess.stdout.decode('utf-8')
+            self.plugin_run.stderr = completedProcess.stderr.decode('utf-8')
             self.plugin_run.execute_duration = end_time - start_time
         except subprocess.TimeoutExpired as te:
-            self.plugin_run.run_status = PluginRun.RunStatus.TIMED_OUT
-            self.plugin_run.stdout = te.stdout
-            self.plugin_run.stderr = te.stderr
+            self.plugin_run.run_status = RunStatus.TIMED_OUT
+            self.plugin_run.stdout = te.stdout.decode('utf-8')
+            self.plugin_run.stderr = te.stderr.decode('utf-8')
         except subprocess.CalledProcessError as cpe:
-            self.plugin_run.run_status = PluginRun.RunStatus.FAILED
-            self.plugin_run.stdout = cpe.stdout
-            self.plugin_run.stderr = cpe.stderr
+            self.plugin_run.run_status = RunStatus.FAILED
+            self.plugin_run.stdout = cpe.stdout.decode('utf-8')
+            self.plugin_run.stderr = cpe.stderr.decode('utf-8')
         except HashJSONFailedException as hf:
-            self.plugin_run.run_status = PluginRun.RunStatus.HASH_FAILED
+            self.plugin_run.run_status = RunStatus.HASH_FAILED
             self.plugin_run.stderr = f'Error {hf}'
 
         self.plugin_run.save()

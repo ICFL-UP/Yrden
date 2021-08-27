@@ -2,11 +2,9 @@ import logging
 import os
 import json
 import shutil
-import datetime
-import zipfile
+import threading
 
-from typing import Any
-from django.db.models.query import QuerySet
+from typing import Any, List
 from django.forms.models import BaseModelForm
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse
@@ -16,13 +14,13 @@ from django.urls import reverse_lazy
 from django.views.generic.edit import DeleteView
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.utils.timezone import make_aware
+from django.utils import timezone
+from datetime import datetime
 
-from core.utils import build_zip_json, create_venv, extract_zip, validate_plugin_hash
-from core.models import Plugin, PluginRun
+from core.utils import build_zip_json, create_venv, extract_zip, write_log
+from core.models import Plugin
 from core.forms import PluginFormSet, PluginSourceForm
-from core.run import Run
-from core.exceptions import HashJSONFailedException
+from core.enums.log_type_enum import LogType
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] (%(threadName)-9s) %(message)s',)
@@ -82,37 +80,39 @@ class PluginCreateView(CreateView):
         self.object = form.save(commit=False)
         self.object.source_dest = form.cleaned_data['source_dest']
         self.object.source_hash = form.cleaned_data['source_hash']
-        # TODO: https://github.com/ICFL-UP/Yrden/issues/21
-        self.object.source_file_hash = build_zip_json(
-            zipfile.ZipFile(form.cleaned_data['plugin_zip_file']))
         self.object.upload_time = form.cleaned_data['upload_time']
         self.object.upload_user = form.cleaned_data['upload_user']
         self.object.save()
 
+        build_hash_thread = threading.Thread(
+            target=build_zip_json, args=(form.cleaned_data['plugin_zip_file'].file, self.object))
+        build_hash_thread.start()
+
         log_json: dict = {
-            'log_datetime': datetime.datetime.timestamp(datetime.datetime.now()),
+            'log_datetime': datetime.timestamp(timezone.now()),
             'source_dest': self.object.source_dest,
             'source_hash': self.object.source_hash,
             'upload_time': self.object.upload_time.strftime("%m/%d/%Y, %H:%M:%S"),
             'upload_user': self.object.upload_user,
-            'source_file_hash': json.loads(self.object.source_file_hash)
         }
-        file_path = self.object.source_dest + os.sep + 'create' + \
-            str(datetime.datetime.timestamp(self.object.upload_time)) + '.json'
-        with open(file_path, 'x') as file:
-            file.write(json.dumps(log_json))
+        write_log(LogType.CREATE, self.object, log_json)
 
         # save Plugin
-        plugin = plugin_formset.save(commit=False)
+        plugin: List[Plugin] = plugin_formset.save(commit=False)
         plugin[0].plugin_source = self.object
         plugin[0].plugin_dest = 'core' + os.sep + \
             'plugin' + os.sep + self.object.source_hash + '_' +  \
-            str(datetime.datetime.timestamp(self.object.upload_time))
-        extract_zip(
-            form.cleaned_data['plugin_zip_file'], plugin[0].plugin_dest)
+            str(datetime.timestamp(self.object.upload_time))
+        extract_zip_thread = threading.Thread(target=extract_zip, args=(
+            form.cleaned_data['plugin_zip_file'], plugin[0].plugin_dest))
+        extract_zip_thread.start()
+
         plugin[0].save()
 
-        create_venv(plugin[0])
+        extract_zip_thread.join()
+
+        venv_thread = threading.Thread(target=create_venv, args=(plugin[0], ))
+        venv_thread.start()
 
         return redirect(reverse("core:index"))
 
@@ -136,12 +136,12 @@ class PluginDeleteView(DeleteView):
 
         shutil.rmtree(object.plugin_dest)
 
-        deleted_time = datetime.datetime.now()
+        deleted_time = timezone.now()
         deleted_dest = 'core' + os.sep + 'source' + os.sep + 'deleted_' + object.plugin_source.source_hash + \
-            '_' + str(datetime.datetime.timestamp(object.plugin_source.upload_time))
+            '_' + str(datetime.timestamp(object.plugin_source.upload_time))
 
         log_json: dict = {
-            'log_datetime': datetime.datetime.timestamp(deleted_time),
+            'log_datetime': datetime.timestamp(deleted_time),
             'source_dest': object.plugin_source.source_dest,
             'source_hash': object.plugin_source.source_hash,
             'upload_time': object.plugin_source.upload_time.strftime("%m/%d/%Y, %H:%M:%S"),
@@ -150,10 +150,7 @@ class PluginDeleteView(DeleteView):
             'username': user,
             'deleted_dest': deleted_dest
         }
-        file_path = object.plugin_source.source_dest + os.sep + 'delete' + \
-            str(datetime.datetime.timestamp(deleted_time)) + '.json'
-        with open(file_path, 'x') as file:
-            file.write(json.dumps(log_json))
+        write_log(LogType.DELETE, object.plugin_source, log_json)
 
         shutil.move(source_dest, deleted_dest)
 
@@ -162,25 +159,3 @@ class PluginDeleteView(DeleteView):
         object.plugin_source.save()
 
         return super().delete(request, *args, **kwargs)
-
-
-def runPlugins(reuqest: HttpRequest):
-    plugins: QuerySet[Plugin] = Plugin.objects.get_queryset()
-
-    for plugin in plugins:
-        should_run = make_aware(datetime.datetime.now()
-                                ) - plugin.last_run_datetime > datetime.timedelta(minutes=plugin.interval)
-
-        if should_run:
-            run = Run(plugin)
-            run.start()
-
-
-def validate_plugins(request: HttpRequest):
-    plugins: QuerySet[Plugin] = Plugin.objects.get_queryset()
-
-    for plugin in plugins:
-        try:
-            validate_plugin_hash(plugin)
-        except HashJSONFailedException as hf:
-            logging.error(f'Error {hf}')

@@ -1,10 +1,9 @@
 import os
 import sys
-import datetime
+from django.utils import timezone
 import kronos
 
 from django.db.models.query import QuerySet
-from django.utils.timezone import make_aware
 
 from core.models import Plugin
 from core.run import Run
@@ -20,8 +19,9 @@ def run_plugins():
 
     for plugin in plugins:
         print(f'RUNNING PLUGIN: {plugin.name}')
-        should_run = make_aware(datetime.datetime.now()
-                                ) - plugin.last_run_datetime > datetime.timedelta(minutes=plugin.interval)
+        should_run = timezone.now() - \
+            plugin.last_run_datetime > timezone.timedelta(
+                minutes=plugin.interval)
 
         if should_run:
             run = Run(plugin)
