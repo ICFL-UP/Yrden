@@ -3,44 +3,51 @@
     Home
 {% endblock %}
 {% block container %}
-<h2>Plugins</h2>
 
-{% if object_list %}
-<table class="table">
-    <thead class="thead-light">
-        <tr>
-            <th scope="col">ID</th>
-            <th scope="col">Uploaded By</th>
-            <th scope="col">Plugin Name</th>
-            <th scope="col">Interval</th>
-            <th scope="col">Last Run</th>
-            <th scope="col">Should Run</th>
-            <th scope="col"></th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for plugin in object_list %}
-        <tr>
-            <td><a href="{% url 'core:plugin_detail' plugin.id %}">{{ plugin.id }}</a></td>
-            <td>{{ plugin.plugin_source.upload_user }}</td>
-            <td>{{ plugin.name }}</a></td>
-            <td>{{ plugin.interval }}</td>
-            <td>{{ plugin.last_run_datetime | date:'Y-M-d H:i:s' }}</td>
-            <td>{{ plugin.should_run }}</td>
-            <td>
-                <a href="{% url 'core:plugin_delete' plugin.id %}" class="btn btn-danger">Delete</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% if is_paginated %}
-    {% include "core/pagination.html" %}
-{% endif %}
-{% else %}
-    <p>No plugins added.</p>
-{% endif %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">Plugins</h5>
+    </div>
 
-<p>Add new plugins <a href="{% url 'core:plugin_create_form' %}">here</a>.</p>
+    <div class="card-body">
+        {% if object_list %}
+        <table class="table">
+            <thead class="thead-light">
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">Uploaded By</th>
+                    <th scope="col">Plugin Name</th>
+                    <th scope="col">Interval</th>
+                    <th scope="col">Last Run</th>
+                    <th scope="col">Should Run</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plugin in object_list %}
+                <tr>
+                    <td><a href="{% url 'core:plugin_detail' plugin.id %}">{{ plugin.id }}</a></td>
+                    <td>{{ plugin.plugin_source.upload_user }}</td>
+                    <td>{{ plugin.name }}</a></td>
+                    <td>{{ plugin.interval }}</td>
+                    <td>{{ plugin.last_run_datetime | date:'Y-M-d H:i:s' }}</td>
+                    <td>{{ plugin.should_run }}</td>
+                    <td>
+                        <a href="{% url 'core:plugin_delete' plugin.id %}" class="btn btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if is_paginated %}
+            {% include "core/pagination.html" %}
+        {% endif %}
+        {% else %}
+            <p>No plugins added.</p>
+        {% endif %}
+
+        <p>Add new plugins <a href="{% url 'core:plugin_create_form' %}">here</a>.</p>
+    </div>
+</div>
 
 {% endblock %}

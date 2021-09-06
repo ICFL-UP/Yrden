@@ -16,6 +16,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 from datetime import datetime
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from core.utils import build_zip_json, create_venv, extract_zip, write_log
 from core.models import Plugin
@@ -26,7 +27,7 @@ logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] (%(threadName)-9s) %(message)s',)
 
 
-class PluginIndexView(ListView):
+class PluginIndexView(LoginRequiredMixin, ListView):
     model = Plugin
     template_name = 'core/index.html'
     context_object_name = 'plugins'
@@ -49,13 +50,13 @@ class PluginIndexView(ListView):
         return context
 
 
-class PluginDetailView(DetailView):
+class PluginDetailView(LoginRequiredMixin, DetailView):
     model = Plugin
     template_name = 'core/plugin_detail.html'
     context_object_name = 'plugin'
 
 
-class PluginCreateView(CreateView):
+class PluginCreateView(LoginRequiredMixin, CreateView):
     form_class = PluginSourceForm
     template_name = 'core/plugin_create_form.html'
     success_url = reverse_lazy('core:index')
@@ -124,7 +125,7 @@ class PluginCreateView(CreateView):
         )
 
 
-class PluginDeleteView(DeleteView):
+class PluginDeleteView(LoginRequiredMixin, DeleteView):
     model = Plugin
     template_name = 'core/plugin_delete.html'
     success_url = reverse_lazy('core:index')

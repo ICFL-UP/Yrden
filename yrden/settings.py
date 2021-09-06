@@ -31,7 +31,6 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -40,6 +39,7 @@ INSTALLED_APPS = [
     'kronos',
     'django_admin_inline_paginator',
     'core.apps.CoreConfig',
+    'django.contrib.admin',
 ]
 
 MIDDLEWARE = [
@@ -130,3 +130,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CUSTOM
 
 PLUGIN_RUN_TIMEOUT = 300  # 5 minutes
+
+# Auth
+LOGIN_REDIRECT_URL = '/core'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
