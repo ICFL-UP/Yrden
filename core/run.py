@@ -23,7 +23,7 @@ class Run(threading.Thread):
         threading.Thread.__init__(self)
 
     def run(self):
-        logging.debug(f'Running Plugin: {self.plugin_run.plugin.name}')
+        logging.debug(f'Running Plugin: {self.plugin_run.plugin.plugin_name}')
 
         main = self.plugin_run.plugin.plugin_dest + os.sep + 'main.py'
         python = self.plugin_run.plugin.plugin_dest + os.sep + \

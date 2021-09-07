@@ -5,6 +5,7 @@ from django.db.models.query import QuerySet
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
+from django.conf import settings
 
 from core.enums.plugin_status import PluginStatus
 from core.enums.run_status import RunStatus
@@ -70,7 +71,8 @@ class PluginSource(SoftDeletionModel):
     upload_time: timezone = models.DateTimeField(null=False)
 
     # name of the user that uploaded the file
-    upload_user: str = models.CharField(max_length=200, null=False)
+    upload_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.DO_NOTHING)
 
     # json string of source file hashes
     source_file_hash: dict = JSONField()
@@ -85,7 +87,7 @@ class Plugin(SoftDeletionModel):
         PluginSource, on_delete=models.CASCADE)
 
     # name of the plugin
-    name: str = models.CharField(max_length=200, null=False)
+    plugin_name: str = models.CharField(max_length=200, null=False)
 
     # interval for when the plugin should run
     interval: int = models.PositiveIntegerField(
@@ -114,7 +116,7 @@ class Plugin(SoftDeletionModel):
     stderr: str = models.TextField(null=True)
 
     def __str__(self) -> str:
-        return self.plugin_source.source_hash + '_' + self.name
+        return self.plugin_source.source_hash + '_' + self.plugin_name
 
     def delete(self):
         self.plugin_source.delete()

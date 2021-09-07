@@ -16,9 +16,10 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 from datetime import datetime
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from core.utils import build_zip_json, create_venv, extract_zip, write_log
-from core.models import Plugin
+from core.models import Plugin, PluginRun
 from core.forms import PluginFormSet, PluginSourceForm
 from core.enums.log_type_enum import LogType
 
@@ -26,7 +27,7 @@ logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] (%(threadName)-9s) %(message)s',)
 
 
-class PluginIndexView(ListView):
+class PluginIndexView(LoginRequiredMixin, ListView):
     model = Plugin
     template_name = 'core/index.html'
     context_object_name = 'plugins'
@@ -39,7 +40,7 @@ class PluginIndexView(ListView):
         paginator = Paginator(plugins, self.paginate_by)
 
         try:
-            plugins = paginator.page
+            plugins = paginator.page(page)
         except PageNotAnInteger:
             plugins = paginator.page(1)
         except EmptyPage:
@@ -49,13 +50,31 @@ class PluginIndexView(ListView):
         return context
 
 
-class PluginDetailView(DetailView):
+class PluginDetailView(LoginRequiredMixin, DetailView):
     model = Plugin
     template_name = 'core/plugin_detail.html'
     context_object_name = 'plugin'
+    paginate_by = 5
+
+    def get_context_data(self, **kwargs):
+        context = super(PluginDetailView, self).get_context_data(**kwargs)
+
+        plugin_runs = PluginRun.objects.filter(plugin=self.kwargs['pk'])
+        page = self.request.GET.get('page')
+        paginator = Paginator(plugin_runs, self.paginate_by)
+
+        try:
+            plugin_runs = paginator.page(page)
+        except PageNotAnInteger:
+            plugin_runs = paginator.page(1)
+        except EmptyPage:
+            plugin_runs = paginator.page(paginator.num_pages)
+
+        context['plugin_runs'] = plugin_runs
+        return context
 
 
-class PluginCreateView(CreateView):
+class PluginCreateView(LoginRequiredMixin, CreateView):
     form_class = PluginSourceForm
     template_name = 'core/plugin_create_form.html'
     success_url = reverse_lazy('core:index')
@@ -71,17 +90,17 @@ class PluginCreateView(CreateView):
         form = self.get_form(form_class)
         plugin_formset = PluginFormSet(self.request.POST)
         if form.is_valid() and plugin_formset.is_valid():
-            return self.form_valid(form, plugin_formset)
+            return self.form_valid(form, plugin_formset, request.user)
         else:
             return self.form_invalid(form, plugin_formset)
 
-    def form_valid(self, form: BaseModelForm, plugin_formset: PluginFormSet):
+    def form_valid(self, form: BaseModelForm, plugin_formset: PluginFormSet, user):
         # save PluginSource
         self.object = form.save(commit=False)
         self.object.source_dest = form.cleaned_data['source_dest']
         self.object.source_hash = form.cleaned_data['source_hash']
         self.object.upload_time = form.cleaned_data['upload_time']
-        self.object.upload_user = form.cleaned_data['upload_user']
+        self.object.upload_user = user
         self.object.save()
 
         build_hash_thread = threading.Thread(
@@ -93,7 +112,8 @@ class PluginCreateView(CreateView):
             'source_dest': self.object.source_dest,
             'source_hash': self.object.source_hash,
             'upload_time': self.object.upload_time.strftime("%m/%d/%Y, %H:%M:%S"),
-            'upload_user': self.object.upload_user,
+            'upload_user_username': self.object.upload_user.username,
+            'upload_user_email': self.object.upload_user.email,
         }
         write_log(LogType.CREATE, self.object, log_json)
 
@@ -124,14 +144,14 @@ class PluginCreateView(CreateView):
         )
 
 
-class PluginDeleteView(DeleteView):
+class PluginDeleteView(LoginRequiredMixin, DeleteView):
     model = Plugin
     template_name = 'core/plugin_delete.html'
     success_url = reverse_lazy('core:index')
 
     def delete(self, request: HttpRequest, *args: str, **kwargs: Any) -> HttpResponse:
         object: Plugin = self.get_object()
-        user = self.request.POST.get('username')
+        user = request.user
         source_dest = object.plugin_source.source_dest
 
         shutil.rmtree(object.plugin_dest)
@@ -145,9 +165,11 @@ class PluginDeleteView(DeleteView):
             'source_dest': object.plugin_source.source_dest,
             'source_hash': object.plugin_source.source_hash,
             'upload_time': object.plugin_source.upload_time.strftime("%m/%d/%Y, %H:%M:%S"),
-            'upload_user': object.plugin_source.upload_user,
+            'upload_user_username': object.plugin_source.upload_user.username,
+            'upload_user_email': object.plugin_source.upload_user.email,
             'source_file_hash': json.loads(object.plugin_source.source_file_hash),
-            'username': user,
+            'username': user.username,
+            'user_email': user.email,
             'deleted_dest': deleted_dest
         }
         write_log(LogType.DELETE, object.plugin_source, log_json)

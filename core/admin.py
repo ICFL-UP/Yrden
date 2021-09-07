@@ -37,7 +37,7 @@ class PluginRunInline(TabularInlinePaginated):
     per_page = 15
 
 
-@ admin.register(Plugin)
+@admin.register(Plugin)
 class PluginAdmin(SoftDeletionAdmin):
     inlines = [
         PluginRunInline

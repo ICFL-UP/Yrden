@@ -1,0 +1,18 @@
+{% extends "core/layout.html" %}
+{% block title %}
+    Logged Out
+{% endblock %}
+
+{% block container %}
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">Logged Out</h5>
+    </div>
+
+    <div class="card-body">
+        <a href="{% url 'login' %}">Return to login</a>
+    </div>
+</div>
+
+{% endblock %}

@@ -21,6 +21,9 @@ class Command(BaseCommand):
                 plugin.last_run_datetime > timezone.timedelta(
                     minutes=plugin.interval)
 
+            # for testing set to true to skip the interval check
+            # should_run = True
+
             if should_run:
                 run = Run(plugin)
                 run.start()
