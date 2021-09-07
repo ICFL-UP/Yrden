@@ -107,7 +107,8 @@ class Plugin(SoftDeletionModel):
     status: str = models.CharField(max_length=11, choices=[
                                    (tag.name, tag.value) for tag in PluginStatus], null=True)
 
-    # python_version /usr/bin/python3.8
+    # python_version
+    python_version: str = models.CharField(max_length=15)
 
     # stdout of the subprocess run
     stdout: str = models.TextField(null=True)

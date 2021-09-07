@@ -11,7 +11,6 @@ from hashlib import md5
 from django.utils import timezone
 from datetime import datetime
 
-from core.models import Plugin, PluginSource
 from core.enums.log_type_enum import LogType
 from core.exceptions import HashJSONFailedException
 from core.enums.plugin_status import PluginStatus
@@ -60,7 +59,7 @@ def extract_zip(file: BufferedReader, directory: str):
         zip.extractall(directory)
 
 
-def build_zip_json(zip_bytes: io.BytesIO, plugin_source: PluginSource) -> None:
+def build_zip_json(zip_bytes: io.BytesIO, plugin_source) -> None:
     """
     Builds a JSON file of the zip contents hashing each file and storing the hash.
     {
@@ -92,7 +91,7 @@ def datetime_to_string(timezone: timezone) -> str:
     return datetime.strftime(timezone, "%m/%d/%Y, %H:%M:%S")
 
 
-def write_log(log_type: LogType, plugin_source: PluginSource, log: dict) -> None:
+def write_log(log_type: LogType, plugin_source, log: dict) -> None:
     path = plugin_source.source_dest + os.sep + log_type.value + '_' + \
         str(datetime.timestamp(plugin_source.upload_time)) + '.json'
 
@@ -100,12 +99,11 @@ def write_log(log_type: LogType, plugin_source: PluginSource, log: dict) -> None
         file.write(json.dumps(log))
 
 
-def run_subprocess(command: 'list[str]', timeout=None) -> subprocess.CompletedProcess:
-    return subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
+def run_subprocess(command: 'list[str]', timeout=None, shell=False) -> subprocess.CompletedProcess:
+    return subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, shell=shell)
 
 
-# TODO: https://github.com/ICFL-UP/Yrden/issues/26
-def create_venv(plugin: Plugin):
+def create_venv(plugin):
     """
     Create virtual env for the specified plugin
     """
@@ -121,7 +119,7 @@ def create_venv(plugin: Plugin):
             'virtualenv',
             venv_dest,
             '-p',
-            'python'
+            plugin.python_version
         ]
         venv_process: subprocess.CompletedProcess = run_subprocess(
             venv_command)
@@ -179,9 +177,28 @@ def validate_dir(directory: str, relative_path: str, hash_dict: dict):
                          filename + '/', hash_dict)
 
 
-def validate_plugin_hash(plugin: Plugin) -> bool:
+def validate_plugin_hash(plugin) -> bool:
     """
     Validate the plugin source file hashes
     """
     validate_dir(plugin.plugin_dest, '', json.loads(
         plugin.plugin_source.source_file_hash))
+
+
+def get_python_choices() -> 'list[(int, str)]':
+    cmd = 'find /bin/ -type f -executable -print -exec file {} \\; | grep python | grep -wE "ELF" | grep -o "\\/bin\\/.*:"'
+
+    python_versions_cp = run_subprocess([cmd], shell=True)
+
+    versions = python_versions_cp.stdout.decode('utf-8').split('\n')
+    python_versions: list[str] = []
+    for version in versions:
+        if version.startswith('/bin/'):
+            python_versions.append(version[:-1])
+
+    python_choices = []
+    for index, value in enumerate(python_versions):
+        val = (index, value)
+        python_choices.append(val)
+
+    return python_choices
