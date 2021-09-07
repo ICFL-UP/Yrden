@@ -17,7 +17,8 @@ class PluginSourceForm(forms.ModelForm):
 
     class Meta:
         model = PluginSource
-        fields = ['upload_user']
+        exclude = ('source_dest', 'source_hash', 'upload_time',
+                   'upload_user', 'source_file_hash', 'deleted_at')
 
     plugin_zip_file = forms.fields.FileField(
         validators=[FileExtensionValidator(allowed_extensions=ALLOWED_EXTENSIONS)])
@@ -64,8 +65,7 @@ class PluginSourceForm(forms.ModelForm):
 class PluginForm(forms.ModelForm):
     class Meta:
         model = Plugin
-        fields = ['name', 'interval', 'should_run']
-        exclude = ('plugin_source', )
+        fields = ['plugin_name', 'interval', 'should_run']
 
 
 PluginFormSet = inlineformset_factory(
