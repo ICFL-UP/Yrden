@@ -18,7 +18,7 @@ from django.utils import timezone
 from datetime import datetime
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from core.utils import build_zip_json, create_venv, extract_zip, write_log
+from core.utils import build_zip_json, create_venv, extract_zip, get_python_choices, write_log
 from core.models import Plugin, PluginRun
 from core.forms import PluginFormSet, PluginSourceForm
 from core.enums.log_type_enum import LogType
@@ -120,6 +120,7 @@ class PluginCreateView(LoginRequiredMixin, CreateView):
         # save Plugin
         plugin: List[Plugin] = plugin_formset.save(commit=False)
         plugin[0].plugin_source = self.object
+        plugin[0].python_version = plugin_formset.cleaned_data[0]['python_version']
         plugin[0].plugin_dest = 'core' + os.sep + \
             'plugin' + os.sep + self.object.source_hash + '_' +  \
             str(datetime.timestamp(self.object.upload_time))

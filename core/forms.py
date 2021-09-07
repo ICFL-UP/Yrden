@@ -8,7 +8,7 @@ from django.forms.models import inlineformset_factory
 from django.utils import timezone
 
 from .models import Plugin, PluginSource
-from .utils import get_MD5, store_zip_file
+from .utils import get_MD5, get_python_choices, store_zip_file
 
 
 class PluginSourceForm(forms.ModelForm):
@@ -66,6 +66,15 @@ class PluginForm(forms.ModelForm):
     class Meta:
         model = Plugin
         fields = ['plugin_name', 'interval', 'should_run']
+
+    version = forms.fields.ChoiceField(choices=get_python_choices())
+
+    def clean_version(self):
+        data: int = int(self.cleaned_data['version'])
+        python_version: str = self.declared_fields['version'].choices[data][1]
+
+        self.cleaned_data['python_version'] = python_version
+        return data
 
 
 PluginFormSet = inlineformset_factory(
