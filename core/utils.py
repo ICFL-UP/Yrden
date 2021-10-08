@@ -4,6 +4,8 @@ import json
 import zipfile
 import subprocess
 import logging
+import shlex
+import pathlib
 
 from io import BufferedReader
 from typing import Union
@@ -99,8 +101,11 @@ def write_log(log_type: LogType, plugin_source, log: dict) -> None:
         file.write(json.dumps(log))
 
 
-def run_subprocess(command: 'list[str]', timeout=None, shell=False) -> subprocess.CompletedProcess:
-    return subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, shell=shell)
+def run_subprocess(command: 'list[str]', cwd=None, timeout=None, shell=False) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout, shell=shell, cwd=cwd)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError("command '{}' return with error (code {}): {}".format(command, e.returncode, e.output))
 
 
 def create_venv(plugin):
@@ -186,14 +191,22 @@ def validate_plugin_hash(plugin) -> bool:
 
 
 def get_python_choices() -> 'list[(int, str)]':
-    cmd = 'find /bin/ -type f -executable -print -exec file {} \\; | grep python | grep -wE "ELF" | grep -o "\\/bin\\/.*:"'
+    cwd = None
 
-    python_versions_cp = run_subprocess([cmd], shell=True)
+    cmd = 'find /bin/ -type f -executable -print -exec file {} \\; | grep python | grep -wE "ELF" | grep -o "\\/bin\\/.*:"'
+    if os.name == 'nt':
+        cmd = 'dir  "AppData\Local\Microsoft\WindowsApps\python*.exe" /b'
+        cwd = str(pathlib.Path.home())
+
+    args = shlex.split(cmd)
+    python_versions_cp = run_subprocess(command=args, cwd=cwd, shell=True)
 
     versions = python_versions_cp.stdout.decode('utf-8').split('\n')
     python_versions: list[str] = []
     for version in versions:
-        if version.startswith('/bin/'):
+        if os.name == 'nt':
+            python_versions.append(version[:-1])
+        elif version.startswith('/bin/'):
             python_versions.append(version[:-1])
 
     python_choices = []
