@@ -5,6 +5,7 @@ import shutil
 import threading
 
 from typing import Any, List
+from django.contrib.auth import login
 from django.forms.models import BaseModelForm
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse
@@ -12,7 +13,7 @@ from django.views.generic import ListView, DetailView, CreateView
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.urls import reverse_lazy
 from django.views.generic.edit import DeleteView
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from datetime import datetime
@@ -20,12 +21,22 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 
 from core.utils import build_zip_json, create_venv, extract_zip, get_python_choices, write_log
 from core.models import Plugin, PluginRun
-from core.forms import PluginFormSet, PluginSourceForm
+from core.forms import NewUserForm, PluginFormSet, PluginSourceForm
 from core.enums.log_type_enum import LogType
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(levelname)s] (%(threadName)-9s) %(message)s',)
 
+
+def register_request(request: HttpRequest):
+    if request.method == "POST":
+        form = NewUserForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect(reverse("core:index"))
+    form = NewUserForm()
+    return render(request=request, template_name="registration/register.html", context={"register_form":form})
 
 class PluginIndexView(LoginRequiredMixin, ListView):
     model = Plugin
