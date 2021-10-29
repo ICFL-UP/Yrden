@@ -4,8 +4,9 @@ import json
 import shutil
 import threading
 
-from typing import Any, List
+from typing import Any, List, Optional
 from django.contrib.auth import login
+from django.db.models.query import QuerySet
 from django.forms.models import BaseModelForm
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse
@@ -18,8 +19,9 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import datetime
 from django.contrib.auth.mixins import LoginRequiredMixin
+from core.run import Run
 
-from core.utils import build_zip_json, create_venv, extract_zip, get_python_choices, write_log
+from core.utils import build_zip_json, create_venv, extract_zip, write_log
 from core.models import Plugin, PluginRun
 from core.forms import NewUserForm, PluginFormSet, PluginSourceForm
 from core.enums.log_type_enum import LogType
@@ -114,9 +116,10 @@ class PluginCreateView(LoginRequiredMixin, CreateView):
         self.object.upload_user = user
         self.object.save()
 
-        build_hash_thread = threading.Thread(
-            target=build_zip_json, args=(form.cleaned_data['plugin_zip_file'].file, self.object))
-        build_hash_thread.start()
+        # build_hash_thread = threading.Thread(
+        #     target=build_zip_json, args=(form.cleaned_data['plugin_zip_file'].file, self.object))
+        # build_hash_thread.start()
+        build_zip_json(form.cleaned_data['plugin_zip_file'].file, self.object)
 
         log_json: dict = {
             'log_datetime': datetime.timestamp(timezone.now()),
@@ -193,3 +196,17 @@ class PluginDeleteView(LoginRequiredMixin, DeleteView):
         object.plugin_source.save()
 
         return super().delete(request, *args, **kwargs)
+
+def handle(self, *args: Any, **options: Any) -> Optional[str]:
+    plugins: QuerySet[Plugin] = Plugin.objects.get_queryset()
+    for plugin in plugins:
+        should_run = timezone.now() - \
+            plugin.last_run_datetime > timezone.timedelta(
+                minutes=plugin.interval)
+
+        # for testing set to true to skip the interval check
+        should_run = True
+
+        if should_run:
+            run = Run(plugin)
+            run.start()

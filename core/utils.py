@@ -116,7 +116,12 @@ def create_venv(plugin):
         plugin.status = PluginStatus.VIRTUALENV
         plugin.save()
 
+        install_venv = run_subprocess(['python', '-m', 'pip', 'install', 'virtualenv', '--upgrade'])
+
         venv_dest = plugin.plugin_dest + os.sep + '.venv'
+        python_version = plugin.python_version
+        if os.name == 'nt':
+            python_version = python_version[:-4]
 
         venv_command = [
             'python',
@@ -124,7 +129,7 @@ def create_venv(plugin):
             'virtualenv',
             venv_dest,
             '-p',
-            plugin.python_version
+            python_version
         ]
         venv_process: subprocess.CompletedProcess = run_subprocess(
             venv_command)
@@ -134,19 +139,16 @@ def create_venv(plugin):
         plugin.stderr = venv_process.stderr.decode('utf-8')
         plugin.save()
 
+        activate = venv_dest + os.sep + 'bin' + os.sep + 'activate'
         python = venv_dest + os.sep + 'bin' + os.sep + 'python'
+        if os.name == 'nt':
+            activate = venv_dest + os.sep + 'Scripts' + os.sep + 'activate'
+            python = venv_dest + os.sep + 'Scripts' + os.sep + 'python'
         requirements = plugin.plugin_dest + os.sep + 'requirements.txt'
 
-        deps_command = [
-            python,
-            '-m',
-            'pip',
-            'install',
-            '-r',
-            requirements
-        ]
+        deps_command = activate + '; ' + python + ' -m pip install -r ' + requirements
         deps_process: subprocess.CompletedProcess = run_subprocess(
-            deps_command)
+            deps_command, shell=True)
 
         plugin.status = PluginStatus.SUCCESS
         plugin.stdout = deps_process.stdout.decode('utf-8')

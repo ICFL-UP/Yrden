@@ -12,7 +12,6 @@ filelock==3.0.12
 idna==3.2
 jsonfield==3.1.0
 Naked==0.1.31
-pkg_resources==0.0.0
 platformdirs==2.2.0
 pycodestyle==2.7.0
 python-crontab==2.5.1
@@ -22,7 +21,7 @@ PyYAML==5.4.1
 requests==2.26.0
 shellescape==3.8.1
 six==1.16.0
-sqlparse==0.4.1
+sqlparse==0.4.2
 toml==0.10.2
 urllib3==1.26.6
 virtualenv==20.7.0

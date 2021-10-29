@@ -28,6 +28,9 @@ class Run(threading.Thread):
         main = self.plugin_run.plugin.plugin_dest + os.sep + 'main.py'
         python = self.plugin_run.plugin.plugin_dest + os.sep + \
             '.venv' + os.sep + 'bin' + os.sep + 'python'
+        if os.name == 'nt':
+            python = self.plugin_run.plugin.plugin_dest + os.sep + \
+            '.venv' + os.sep + 'Scripts' + os.sep + 'python'
 
         try:
             start_time = timezone.now()
@@ -42,8 +45,9 @@ class Run(threading.Thread):
                 python,
                 main
             ]
+            cwd = os.getcwd() + os.sep + self.plugin_run.plugin.plugin_dest
             completedProcess: subprocess.CompletedProcess = run_subprocess(
-                command, settings.PLUGIN_RUN_TIMEOUT)
+                command=command, timeout=settings.PLUGIN_RUN_TIMEOUT, shell=True, cwd=cwd)
 
             end_time = timezone.now()
 

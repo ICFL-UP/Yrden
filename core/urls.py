@@ -13,4 +13,5 @@ urlpatterns = [
      path('plugin/<int:pk>/delete',
          views.PluginDeleteView.as_view(), name='plugin_delete'),
      path("register", views.register_request, name="register"),
+     path('run', views.handle, name='run')
 ]
